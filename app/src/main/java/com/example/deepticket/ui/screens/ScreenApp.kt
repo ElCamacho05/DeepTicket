@@ -21,6 +21,13 @@ import androidx.compose.ui.unit.sp
 import com.example.deepticket.data.ProductItem
 import com.example.deepticket.ui.theme.AppColors
 import com.example.deepticket.ui.components.*
+import android.Manifest
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun HomeScreen(productsList: List<ProductItem>, searchQuery: String, onQueryChange: (String) -> Unit, totalItemsInLastScan: Int, totalSpentInLastScan: Double, totalRastreados: Int, totalMarcas: Int, totalRecibos: Int, onVerReciboClick: () -> Unit) {
@@ -236,5 +243,64 @@ fun ReceiptDetailsScreen(products: List<ProductItem>, totalSpent: Double, onBack
         Spacer(modifier = Modifier.height(24.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Productos Extraídos", color = AppColors.orangeAccent, fontSize = 18.sp, fontWeight = FontWeight.Bold); Text("$${String.format("%.2f", totalSpent)}", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
         Spacer(modifier = Modifier.height(16.dp)); products.forEach { CardProducto(it) }; Spacer(modifier = Modifier.height(40.dp))
+    }
+}
+
+@Composable
+fun DeepTicketApp() {
+    val mockDatabase = remember {
+        listOf(
+            ProductItem("1", Icons.Default.Opacity, "Lala Whole Milk", "Lala", "2 units", "Lácteos", 57.00, "2026-03-21", "Walmart"),
+            ProductItem("2", Icons.Default.BakeryDining, "Corn Flakes", "Kellogg's", "1 box", "Cereales", 65.00, "2026-03-21", "Walmart"),
+            ProductItem("3", Icons.Default.LocalCafe, "Coca-Cola 600ml", "Coca-Cola", "6 bottles", "Bebidas", 108.00, "2026-03-20", "Chedraui"),
+            ProductItem("4", Icons.Default.WaterDrop, "Corn Oil", "Mazola", "1 liter", "Aceites", 45.50, "2026-03-20", "Chedraui"),
+            ProductItem("5", Icons.Default.CleaningServices, "Sponge", "Scotch-Brite", "3 packs", "Limpieza", 30.00, "2026-03-16", "Oxxo"),
+            ProductItem("6", Icons.Default.LocalCafe, "Coca Zero", "Coca-Cola", "2 bottles", "Bebidas", 38.00, "2026-02-15", "Soriana")
+        )
+    }
+
+    var selectedTab by remember { mutableStateOf("Inicio") }
+    var searchQuery by remember { mutableStateOf("") }
+    var showReceiptDetails by remember { mutableStateOf(false) }
+
+    // Estados de la Cámara
+    var isCameraOpen by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+        if (isGranted) isCameraOpen = true
+        else Toast.makeText(context, "Permiso denegado", Toast.LENGTH_SHORT).show()
+    }
+
+    val totalSpent = mockDatabase.sumOf { it.price }
+    val totalTrackedItemsCount = mockDatabase.sumOf { it.unit.takeWhile { char -> char.isDigit() }.toIntOrNull() ?: 1 }
+
+    if (isCameraOpen) {
+        CameraScreen(onClose = { isCameraOpen = false })
+    } else if (showReceiptDetails) {
+        ReceiptDetailsScreen(products = mockDatabase.filter { it.date == "2026-03-21" }, totalSpent = 122.00, onBack = { showReceiptDetails = false })
+    } else {
+        Scaffold(
+            containerColor = AppColors.background,
+            bottomBar = { BottomNav(selectedTab = selectedTab, onTabSelected = { selectedTab = it }) },
+            floatingActionButton = {
+                ScanButton(onClick = {
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                        isCameraOpen = true
+                    } else {
+                        permissionLauncher.launch(Manifest.permission.CAMERA)
+                    }
+                })
+            },
+            floatingActionButtonPosition = FabPosition.Center
+        ) { padding ->
+            Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+                when (selectedTab) {
+                    "Inicio" -> HomeScreen(mockDatabase.filter { it.name.contains(searchQuery, true) || it.brand.contains(searchQuery, true) }, searchQuery, { searchQuery = it }, 2, 122.00, totalTrackedItemsCount, mockDatabase.map { it.brand }.distinct().size, 4, { showReceiptDetails = true })
+                    "Historial" -> HistorialScreen(products = mockDatabase)
+                    "Analíticas" -> AnaliticasScreen(products = mockDatabase, totalSpent = totalSpent)
+                    "Perfil" -> PerfilScreen(totalRastreados = totalTrackedItemsCount)
+                }
+            }
+        }
     }
 }

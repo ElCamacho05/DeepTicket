@@ -56,4 +56,19 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation("androidx.compose.material:material-icons-extended")
+
+    // --- LIBRERÍAS PARA CÁMARA (CameraX) ---
+    val camerax_version = "1.3.1"
+    implementation("androidx.camera:camera-core:${camerax_version}")
+    implementation("androidx.camera:camera-camera2:${camerax_version}")
+    implementation("androidx.camera:camera-lifecycle:${camerax_version}")
+    implementation("androidx.camera:camera-view:${camerax_version}")
+
+    // --- LIBRERÍA PARA OCR (ML Kit Text Recognition) ---
+    // Usamos la versión "play-services" que es más ligera porque usa la IA que ya trae Google Play
+    implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.0")
+
+    // --- LIBRERÍA PARA ICONOS EXTRAS ---
+    // La necesitaremos para el botón de "tomar foto"
+    implementation("androidx.compose.material:material-icons-extended")
 }

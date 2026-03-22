@@ -56,7 +56,19 @@ fun SummaryCard(valor: String, etiqueta: String, icono: ImageVector, color: Colo
 fun Header() { Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Column { Text("Sábado, 21 de Marzo", color = AppColors.greyText, fontSize = 14.sp); Text("Hola, Carlos 👋", color = AppColors.textPrimary, fontSize = 28.sp, fontWeight = FontWeight.Bold) }; Surface(modifier = Modifier.size(48.dp), color = AppColors.elementBackground, shape = CircleShape) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Default.Notifications, contentDescription = null, tint = AppColors.greyText); Box(modifier = Modifier.size(10.dp).align(Alignment.TopEnd).offset(x = (-8).dp, y = 8.dp).background(AppColors.orangeAccent, CircleShape)) } } } }
 
 @Composable
-fun ScanButton() { ExtendedFloatingActionButton(onClick = { /* Cámara */ }, containerColor = AppColors.orangeAccent, contentColor = Color.White, shape = RoundedCornerShape(30.dp), modifier = Modifier.height(60.dp).width(240.dp).offset(y = (-20).dp)) { Icon(Icons.Default.CameraAlt, contentDescription = null); Spacer(Modifier.width(8.dp)); Text("Escanear Recibo", fontSize = 18.sp, fontWeight = FontWeight.Bold) } }
+fun ScanButton(onClick: () -> Unit) {
+    ExtendedFloatingActionButton(
+        onClick = onClick, //Esta es la acción que abrirá la camará de acuerdo al botón de escanear
+        containerColor = AppColors.orangeAccent,
+        contentColor = Color.White,
+        shape = RoundedCornerShape(30.dp),
+        modifier = Modifier.height(60.dp).width(240.dp).offset(y = (-20).dp)
+    ) {
+        Icon(Icons.Default.CameraAlt, contentDescription = null)
+        Spacer(Modifier.width(8.dp))
+        Text("Escanear Recibo", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+    }
+}
 
 @Composable
 fun DonutChart(gastosPorMarca: Map<String, Double>) {
