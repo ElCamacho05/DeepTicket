@@ -55,4 +55,4 @@ def procesar_ticket(ticket: TicketInput):
 # Bloque de ejecución (útil para correrlo en local)
 if __name__ == "__main__":
     # Suponiendo que el archivo se llama main.py
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)
