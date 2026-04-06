@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.0"
+
 }
 
 android {
@@ -71,4 +73,18 @@ dependencies {
     // --- LIBRERÍA PARA ICONOS EXTRAS ---
     // La necesitaremos para el botón de "tomar foto"
     implementation("androidx.compose.material:material-icons-extended")
+
+    implementation("io.ktor:ktor-client-android:2.3.12")
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.6.1")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
+    implementation("io.ktor:ktor-client-android:2.3.12")
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.6.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+
+    // LÍNEA PARA EL LOGIN
+    implementation("io.github.jan-tennert.supabase:gotrue-kt:2.6.1")
+
+
 }

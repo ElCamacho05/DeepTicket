@@ -16,6 +16,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,15 +26,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.example.deepticket.ui.theme.AppColors
+import kotlinx.coroutines.launch
+
+// Importamos la función que creamos en el archivo 2
+import com.example.deepticket.validarTicket
 
 @Composable
 fun CameraScreen(onClose: () -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
+    val coroutineScope = rememberCoroutineScope()
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        // Visor de la cámara
+
         AndroidView(
             factory = { ctx ->
                 val previewView = PreviewView(ctx)
@@ -49,7 +55,7 @@ fun CameraScreen(onClose: () -> Unit) {
                         cameraProvider.unbindAll()
                         cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview)
                     } catch (exc: Exception) {
-                        Toast.makeText(ctx, "Error al iniciar cámara", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctx, "Error cámara", Toast.LENGTH_SHORT).show()
                     }
                 }, executor)
                 previewView
@@ -57,7 +63,6 @@ fun CameraScreen(onClose: () -> Unit) {
             modifier = Modifier.fillMaxSize()
         )
 
-        // Botón cerrar
         IconButton(
             onClick = onClose,
             modifier = Modifier.padding(top = 40.dp, start = 20.dp).background(Color.Black.copy(alpha = 0.5f), CircleShape)
@@ -65,7 +70,6 @@ fun CameraScreen(onClose: () -> Unit) {
             Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.White)
         }
 
-        // Botón capturar (Próximamente OCR)
         Box(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 50.dp)) {
             Box(
                 modifier = Modifier
@@ -74,7 +78,20 @@ fun CameraScreen(onClose: () -> Unit) {
                     .padding(8.dp)
                     .background(AppColors.orangeAccent, CircleShape)
                     .clickable {
-                        Toast.makeText(context, "¡Click! Procesando...", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Validando...", Toast.LENGTH_SHORT).show()
+
+                        coroutineScope.launch {
+                            val codigoSimulado = "CA-2016-152156"
+                            val ticket = validarTicket(codigoSimulado)
+
+                            if (ticket != null) {
+                                Toast.makeText(context, "✅ Válido: ${ticket.customername}", Toast.LENGTH_LONG).show()
+                                // Aquí comprobamos que sí trae TODOS tus datos:
+                                println("Edad: ${ticket.edad}, Género: ${ticket.genero}, Ingresos: $${ticket.ingresosanuales}, Producto: ${ticket.productname}")
+                            } else {
+                                Toast.makeText(context, "❌ TICKET INVÁLIDO", Toast.LENGTH_LONG).show()
+                            }
+                        }
                     }
             )
         }
