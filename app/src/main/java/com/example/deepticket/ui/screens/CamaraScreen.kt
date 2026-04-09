@@ -1,7 +1,11 @@
 package com.example.deepticket.ui.screens
 
+import android.content.Context
+import android.net.Uri
 import android.widget.Toast
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -16,7 +20,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,17 +29,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.example.deepticket.ui.theme.AppColors
-import kotlinx.coroutines.launch
-
-// Importamos la función que creamos en el archivo 2
-import com.example.deepticket.validarTicket
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.concurrent.Executor
 
 @Composable
 fun CameraScreen(onClose: () -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
-    val coroutineScope = rememberCoroutineScope()
+
+    // Capturador de imágenes real
+    val imageCapture = remember { ImageCapture.Builder().build() }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
 
@@ -53,7 +62,9 @@ fun CameraScreen(onClose: () -> Unit) {
                     val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
                     try {
                         cameraProvider.unbindAll()
-                        cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview)
+                        cameraProvider.bindToLifecycle(
+                            lifecycleOwner, cameraSelector, preview, imageCapture
+                        )
                     } catch (exc: Exception) {
                         Toast.makeText(ctx, "Error cámara", Toast.LENGTH_SHORT).show()
                     }
@@ -78,22 +89,96 @@ fun CameraScreen(onClose: () -> Unit) {
                     .padding(8.dp)
                     .background(AppColors.orangeAccent, CircleShape)
                     .clickable {
-                        Toast.makeText(context, "Validando...", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Tomando foto...", Toast.LENGTH_SHORT).show()
 
-                        coroutineScope.launch {
-                            val codigoSimulado = "CA-2016-152156"
-                            val ticket = validarTicket(codigoSimulado)
+                        // Ejecutamos la toma de la foto
+                        takePhoto(
+                            context = context,
+                            imageCapture = imageCapture,
+                            executor = ContextCompat.getMainExecutor(context),
+                            onImageSaved = { uri ->
+                                Toast.makeText(context, "Enviando a la IA...", Toast.LENGTH_SHORT).show()
 
-                            if (ticket != null) {
-                                Toast.makeText(context, "✅ Válido: ${ticket.customername}", Toast.LENGTH_LONG).show()
-                                // Aquí comprobamos que sí trae TODOS tus datos:
-                                println("Edad: ${ticket.edad}, Género: ${ticket.genero}, Ingresos: $${ticket.ingresosanuales}, Producto: ${ticket.productname}")
-                            } else {
-                                Toast.makeText(context, "❌ TICKET INVÁLIDO", Toast.LENGTH_LONG).show()
+                                // AQUÍ ESTÁ TU URL CON TU IP EXACTA
+                                val miUrl = "http://192.168.100.141:8000/parse-ticket"
+
+                                // Llamamos a la función que sube la foto
+                                subirTicketAlServidor(uri, miUrl) { respuesta ->
+                                    println("RESPUESTA DEL SERVIDOR: $respuesta")
+                                }
+                            },
+                            onError = {
+                                Toast.makeText(context, "Error al tomar foto", Toast.LENGTH_SHORT).show()
                             }
-                        }
+                        )
                     }
             )
         }
     }
+}
+
+// -------------------------------------------------------------------
+// FUNCIONES AUXILIARES (Van en el mismo archivo hasta abajo)
+// -------------------------------------------------------------------
+
+private fun takePhoto(
+    context: Context,
+    imageCapture: ImageCapture,
+    executor: Executor,
+    onImageSaved: (Uri) -> Unit,
+    onError: (ImageCaptureException) -> Unit
+) {
+    val photoFile = File(
+        context.externalCacheDir,
+        SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US).format(System.currentTimeMillis()) + ".jpg"
+    )
+
+    val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+
+    imageCapture.takePicture(
+        outputOptions,
+        executor,
+        object : ImageCapture.OnImageSavedCallback {
+            override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                onImageSaved(Uri.fromFile(photoFile))
+            }
+            override fun onError(exception: ImageCaptureException) {
+                onError(exception)
+            }
+        }
+    )
+}
+
+private fun subirTicketAlServidor(uriFoto: Uri, urlServidor: String, onResult: (String) -> Unit) {
+    val client = OkHttpClient()
+    val file = File(uriFoto.path!!) // Agarramos el archivo de la foto
+
+    val requestBody = MultipartBody.Builder()
+        .setType(MultipartBody.FORM)
+        .addFormDataPart(
+            "file",
+            file.name,
+            file.asRequestBody("image/jpeg".toMediaTypeOrNull())
+        )
+        .build()
+
+    val request = Request.Builder()
+        .url(urlServidor)
+        .post(requestBody)
+        .build()
+
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            onResult("Error de red: ${e.message}")
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            val respuestaStr = response.body?.string() ?: "Sin respuesta"
+            if (response.isSuccessful) {
+                onResult("ÉXITO: $respuestaStr")
+            } else {
+                onResult("Error en servidor (${response.code}): $respuestaStr")
+            }
+        }
+    })
 }
