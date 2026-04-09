@@ -87,7 +87,7 @@ async def procesar_ticket(file: UploadFile = File(...)):
         pixel_values, 
         decoder_input_ids=decoder_input_ids, 
         max_length=512,
-        early_stopping=True, 
+
         pad_token_id=processor.tokenizer.pad_token_id, 
         eos_token_id=processor.tokenizer.eos_token_id
     )
