@@ -177,7 +177,7 @@ fun DeepTicketApp() {
                 // 2. Manda la foto y los datos del usuario al backend
                 coroutineScope.launch {
                     Toast.makeText(context, "Analizando con IA...", Toast.LENGTH_LONG).show()
-                    
+
                     val miUrl = "https://knee-matchless-jittery.ngrok-free.dev/parse-ticket"
 
                     subirTicketAlServidor(
@@ -285,7 +285,11 @@ fun DeepTicketApp() {
                         onVerReciboClick = { showReceiptDetails = true }
                     )
                     "Historial" -> HistorialScreen(products = database.toList())
-                    "Analíticas" -> AnaliticasScreen(products = database.toList(), totalSpent = database.sumOf { it.price })
+                    "Analíticas" -> AnaliticasScreen(
+                        products    = database.toList(),
+                        totalSpent  = database.sumOf { it.price },
+                        userId      = userId
+                    )
                     "Perfil" -> PerfilScreen(userName = userName, totalRastreados = database.size)
                 }
 
