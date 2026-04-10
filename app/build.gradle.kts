@@ -87,5 +87,5 @@ dependencies {
     // LÍNEA PARA EL LOGIN
     implementation("io.github.jan-tennert.supabase:gotrue-kt:2.6.1")
 
-
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 }
