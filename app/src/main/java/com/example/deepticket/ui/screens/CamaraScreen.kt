@@ -39,7 +39,7 @@ import java.util.Locale
 import java.util.concurrent.Executor
 
 @Composable
-fun CameraScreen(onClose: () -> Unit) {
+fun CameraScreen(onClose: () -> Unit, onPhotoTaken: (Uri) -> Unit) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
@@ -97,15 +97,8 @@ fun CameraScreen(onClose: () -> Unit) {
                             imageCapture = imageCapture,
                             executor = ContextCompat.getMainExecutor(context),
                             onImageSaved = { uri ->
-                                Toast.makeText(context, "Enviando a la IA...", Toast.LENGTH_SHORT).show()
-
-                                // AQUÍ ESTÁ TU URL CON TU IP EXACTA
-                                val miUrl = "http://192.168.100.141:8000/parse-ticket"
-
-                                // Llamamos a la función que sube la foto
-                                subirTicketAlServidor(uri, miUrl) { respuesta ->
-                                    println("RESPUESTA DEL SERVIDOR: $respuesta")
-                                }
+                                // ¡LISTO! La foto se tomó, se la devolvemos a la pantalla principal
+                                onPhotoTaken(uri) 
                             },
                             onError = {
                                 Toast.makeText(context, "Error al tomar foto", Toast.LENGTH_SHORT).show()
@@ -149,9 +142,17 @@ private fun takePhoto(
     )
 }
 
-private fun subirTicketAlServidor(uriFoto: Uri, urlServidor: String, onResult: (String) -> Unit) {
+// Asegúrate de que la función NO sea "private" para que DeepTicketApp la pueda llamar.
+// Cámbiala a "fun" en lugar de "private fun"
+fun subirTicketAlServidor(
+    uriFoto: Uri, 
+    urlServidor: String, 
+    userId: String,      // Nuevo parámetro
+    userName: String,    // Nuevo parámetro
+    onResult: (String) -> Unit
+) {
     val client = OkHttpClient()
-    val file = File(uriFoto.path!!) // Agarramos el archivo de la foto
+    val file = File(uriFoto.path!!)
 
     val requestBody = MultipartBody.Builder()
         .setType(MultipartBody.FORM)
@@ -160,6 +161,9 @@ private fun subirTicketAlServidor(uriFoto: Uri, urlServidor: String, onResult: (
             file.name,
             file.asRequestBody("image/jpeg".toMediaTypeOrNull())
         )
+        // AÑADIMOS LOS DATOS DEL USUARIO (Deben llamarse igual que en api.py: customer_id y customer_name)
+        .addFormDataPart("customer_id", userId)
+        .addFormDataPart("customer_name", userName)
         .build()
 
     val request = Request.Builder()

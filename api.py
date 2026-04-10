@@ -1,14 +1,21 @@
+from supabase import create_client, Client
+import os
 import re
 import os
 import shutil
 import torch
 from PIL import Image
 from transformers import DonutProcessor, VisionEncoderDecoderModel
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Form
 import uvicorn
 
 # Inicializamos la API
 app = FastAPI(title="API Backend - Escáner de Tickets")
+
+URL_SUPABASE = "https://kqwuxnejznikpcqvagul.supabase.co"
+KEY_SUPABASE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtxd3V4bmVqem5pa3BjcXZhZ3VsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0Mzc4MTYsImV4cCI6MjA5MTAxMzgxNn0.2aK62lF0vquIMLvOa8R4Tc-PHBZFvNKwpK64R1DVv7E"
+
+supabase: Client = create_client(URL_SUPABASE, KEY_SUPABASE)
 
 # ==========================================
 # 1. CARGAMOS EL MODELO (SÓLO UNA VEZ AL INICIO)
@@ -65,11 +72,19 @@ def parse_sroie_output(raw: str) -> dict:
 # 3. EL ENDPOINT QUE RECIBE LA FOTO DE KOTLIN
 # ==========================================
 @app.post("/parse-ticket")
-async def procesar_ticket(file: UploadFile = File(...)):
+
+@app.post("/parse-ticket")
+async def procesar_ticket(
+        file: UploadFile = File(...),
+        customer_id: str = Form(...),   # Recibimos el ID desde Android
+        customer_name: str = Form(...)  # Recibimos el Nombre desde Android
+):
     # Guardamos la foto temporalmente
     temp_file_path = f"temp_{file.filename}"
     with open(temp_file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
+
+        print("foto guardada")
     
     if model_donut is None:
         return {"status": "error", "mensaje": "El modelo no está cargado en el servidor."}
@@ -102,8 +117,50 @@ async def procesar_ticket(file: UploadFile = File(...)):
     # Limpiamos el texto con tu función
     resultado = parse_sroie_output(texto_leido_por_ia)
     
-    # Borramos la foto para no saturar tu disco duro
-    os.remove(temp_file_path)
+    # --- INSERCIÓN EN LA BASE DE DATOS (SUPABASE) ---
+    empresa = resultado.get("Empresa", "Supermercado")
+    
+    try:
+        # Por cada producto encontrado en el ticket, insertamos un registro
+        for producto in resultado.get("_productos", []):
+            
+            # Limpiamos el precio por si trae signos de dólar o texto raro
+            precio_limpio = producto.get("Precio", "0.0").replace("$", "").replace(",", "")
+            try:
+                precio_float = float(precio_limpio)
+            except:
+                precio_float = 0.0
+
+            nombre_del_producto = producto.get("Producto", "Desconocido")
+
+            nuevo_registro = {
+                "Order ID": f"TIC-{os.urandom(4).hex().upper()}",
+                "Customer ID": customer_id,           
+                "Customer Name": customer_name,
+                "Sub-Category": empresa,
+                "Precio_Total": precio_float,
+                "Quantity": 1, 
+                "Edad": 25,
+                "Genero": "No especificado",
+                "Ingresos_Anuales": 0.0,
+                "Education": "N/A",
+                "Marital_Status": "Single",
+                "Tipo_Comercio": empresa,
+                # Como lo pediste: Product Name y Category reciben exactamente lo mismo
+                "Category": nombre_del_producto,
+                "Product Name": nombre_del_producto
+            }
+            # Insertamos en tu tabla 'tickets'
+            supabase.table("tickets").insert(nuevo_registro).execute()
+            print(nuevo_registro)
+            
+    except Exception as e:
+        print(f"Error guardando en Supabase: {e}")
+    # --- FIN DE INSERCIÓN ---
+
+    # Borramos la foto temporal
+    if os.path.exists(temp_file_path):
+        os.remove(temp_file_path)
     
     return {
         "status": "success",
