@@ -151,7 +151,11 @@ fun subirTicketAlServidor(
     userName: String,    // Nuevo parámetro
     onResult: (String) -> Unit
 ) {
-    val client = OkHttpClient()
+    val client = OkHttpClient.Builder()
+        .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS) // Tiempo para conectar al server
+        .writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)   // Tiempo para enviar la foto
+        .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)    // Tiempo para esperar a la IA
+        .build()
     val file = File(uriFoto.path!!)
 
     val requestBody = MultipartBody.Builder()

@@ -4,19 +4,23 @@ import com.example.deepticket.supabase
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.math.sqrt
 
 // ─── Modelo de datos que mapea la tabla "tickets" de Supabase ───────────────
+@OptIn(InternalSerializationApi::class)
 @Serializable
 data class TicketRow(
-    @SerialName("customer_id")    val customerId: String,
-    @SerialName("product_name")   val productName: String,
-    @SerialName("category")       val category: String,
-    @SerialName("edad")           val edad: Int,
-    @SerialName("genero")         val genero: String,
-    @SerialName("ingresos_anuales") val ingresosAnuales: Double
+    @SerialName("Customer ID")    val customerId: String,    // Antes: customer_id
+    @SerialName("Product Name")   val productName: String,   // Antes: product_name
+    @SerialName("Category")       val category: String,      // Antes: category
+    @SerialName("Precio_Total") val precioTotal: Double, // <-- ¡Importante!
+    @SerialName("Sub-Category") val subCategory: String? = null,
+    @SerialName("Edad")           val edad: Int,             // Antes: edad
+    @SerialName("Genero")         val genero: String,        // Antes: genero
+    @SerialName("Ingresos_Anuales") val ingresosAnuales: Double // Revisa si en Python es "Ingresos_Anuales"
 )
 
 // ─── Resultado de una recomendación ─────────────────────────────────────────

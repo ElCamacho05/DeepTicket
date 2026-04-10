@@ -24,7 +24,7 @@ print("Cargando cerebro visual (Donut)... Esto puede tardar unos segundos.")
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 # ¡OJO AQUÍ! Asegúrate de que esta ruta sea correcta dependiendo de dónde ejecutes api.py
-RUTA_DONUT = "Modelos/EscanerTickets/" 
+RUTA_DONUT = r"C:\Users\eare2\Downloads\Tickets\Tickets\Modelos\EscanerTickets"
 
 try:
     processor = DonutProcessor.from_pretrained(RUTA_DONUT)

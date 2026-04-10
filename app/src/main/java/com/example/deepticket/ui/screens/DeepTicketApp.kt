@@ -35,10 +35,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.example.deepticket.data.ProductItem
+import com.example.deepticket.data.TicketRow
 import com.example.deepticket.ui.components.BottomNav
 import com.example.deepticket.ui.components.ScanButton
 import com.example.deepticket.ui.theme.AppColors
 import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.launch
 
 @Composable
@@ -63,6 +65,28 @@ fun DeepTicketApp() {
                 if (!nombreExtraido.isNullOrBlank()) {
                     userName = nombreExtraido
                 }
+                val ticketsDesdeNube = com.example.deepticket.supabase.postgrest["tickets"]
+                    .select {
+                        filter { eq("Customer ID", user.id) } // Filtramos para que solo veas TUS tickets
+                    }
+                    .decodeList<TicketRow>() // Usamos la clase TicketRow que ya tienes
+
+                // Convertimos esos datos de la nube al formato de tu lista de la interfaz
+                val itemsParaLaApp = ticketsDesdeNube.map { row ->
+                    ProductItem(
+                        id = java.util.UUID.randomUUID().toString(),
+                        name = row.productName,
+                        brand = "Registrado",
+                        unit = "1 un.",
+                        category = row.category,
+                        price = row.precioTotal, // Asegúrate que TicketRow tenga este campo
+                        date = "Reciente",
+                        supermarket = row.subCategory ?: "Tienda",
+                        iconId = Icons.Default.List
+                    )
+                }
+                database.clear()
+                database.addAll(itemsParaLaApp)
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -95,7 +119,7 @@ fun DeepTicketApp() {
                 // -----------------------------
 
                 // URL de tu servidor Python
-                val miUrl = "https://knee-matchless-jittery.ngrok-free.dev/parse-ticket"
+                val miUrl = "http://10.0.2.2:8000/parse-ticket"
 
                 // Llamamos a la misma función de red
                 subirTicketAlServidor(
@@ -178,7 +202,7 @@ fun DeepTicketApp() {
                 coroutineScope.launch {
                     Toast.makeText(context, "Analizando con IA...", Toast.LENGTH_LONG).show()
 
-                    val miUrl = "https://knee-matchless-jittery.ngrok-free.dev/parse-ticket"
+                    val miUrl = "http://10.0.2.2:8000/parse-ticket"
 
                     subirTicketAlServidor(
                         uriFoto = uriDeLaFoto,
