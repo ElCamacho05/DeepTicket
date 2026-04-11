@@ -23,3 +23,17 @@ data class Ticket(
     @SerialName("marital_status") val maritalstatus: String,
     @SerialName("tipo_comercio") val tipocomercio: String
 )
+// Agrega esto al final de deepticket/data/Ticket.kt
+
+@OptIn(InternalSerializationApi::class)
+@Serializable
+data class TicketRow(
+    @SerialName("Customer ID")    val customerId: String,
+    @SerialName("Product Name")   val productName: String,
+    @SerialName("Category")       val category: String,
+    @SerialName("Precio_Total")   val precioTotal: Double,
+    @SerialName("Sub-Category")   val subCategory: String? = null,
+    @SerialName("Edad")           val edad: Int? = null,
+    @SerialName("Genero")         val genero: String? = null,
+    @SerialName("Ingresos_Anuales") val ingresosAnuales: Double? = null
+)
